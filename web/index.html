@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#0a130e">
+  <meta name="description" content="Emberwood Vale — a hand-built isometric vale of moss, stone and emberlight.">
+  <title>Emberwood Vale — An Isometric Tale</title>
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="/assets/fonts/cinzel-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div id="app">
+    <canvas id="game" tabindex="0" aria-label="The isometric vale. Use WASD or arrow keys to walk, and E to interact."></canvas>
+    <div class="grade" aria-hidden="true"></div>
+    <div class="vignette" aria-hidden="true"></div>
+
+    <div id="hud" class="hud is-hidden" aria-live="off">
+      <header class="topbar">
+        <div class="location panel">
+          <div class="crest crest-small" aria-hidden="true">
+            <svg viewBox="0 0 48 48"><path d="M24 3 43 24 24 45 5 24Z" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M24 10 35 24 24 38 13 24Z" fill="none" stroke="currentColor" stroke-width=".7" opacity=".65"/><circle cx="24" cy="24" r="2.3" fill="currentColor"/></svg>
+          </div>
+          <div>
+            <p class="eyebrow">Emberwood Vale</p>
+            <p class="location-time">The golden hour</p>
+          </div>
+        </div>
+
+        <nav class="top-actions" aria-label="Game menu">
+          <button class="icon-btn" id="soundBtn" type="button" aria-label="Mute sound" title="Sound">
+            <svg class="ico-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            <svg class="ico-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Z" fill="currentColor"/><path d="m16 9 5 6M21 9l-5 6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </button>
+          <button class="icon-btn" id="helpBtn" type="button" aria-label="Controls and help" title="Help">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M9.7 9.2a2.4 2.4 0 1 1 3.6 2.1c-.8.5-1.3 1-1.3 2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="16.8" r="1" fill="currentColor"/></svg>
+          </button>
+          <button class="icon-btn" id="fullscreenBtn" type="button" aria-label="Enter fullscreen" title="Fullscreen">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 15v5h-5M20 9V4h-5M4 15v5h5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </button>
+          <button class="icon-btn" id="menuBtn" type="button" aria-label="Open menu" title="Menu">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M5 12h14M5 17h14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </button>
+        </nav>
+      </header>
+
+      <aside class="quest panel" id="quest" aria-live="polite">
+        <p class="eyebrow">A village task</p>
+        <h2 id="questTitle">Kindle the Beacon</h2>
+        <p class="quest-copy" id="questText">Five ember wisps have scattered across the vale. Find them.</p>
+        <div class="wisp-track" id="wispTrack" aria-hidden="true">
+          <span></span><span></span><span></span><span></span><span></span>
+        </div>
+        <p class="quest-count"><strong id="wispCount">0</strong><span> / 5 embers gathered</span></p>
+      </aside>
+
+      <div class="minimap-panel panel" id="minimapPanel">
+        <div class="minimap-head">
+          <span class="eyebrow">The vale</span>
+          <span class="compass">N</span>
+        </div>
+        <canvas id="minimap" width="320" height="320" aria-label="Village minimap"></canvas>
+        <div class="minimap-zoom">
+          <button id="zoomOut" class="mini-btn" type="button" aria-label="Zoom out">−</button>
+          <button id="zoomIn" class="mini-btn" type="button" aria-label="Zoom in">+</button>
+        </div>
+      </div>
+
+      <div class="hint panel" id="controlsHint">
+        <span class="key">WASD</span><span class="hint-label">move</span>
+        <span class="key">shift</span><span class="hint-label">run</span>
+        <span class="key">E</span><span class="hint-label">interact</span>
+        <span class="key">esc</span><span class="hint-label">menu</span>
+      </div>
+
+      <button class="prompt panel is-hidden" id="interactPrompt" type="button">
+        <span class="key">E</span>
+        <span id="promptText">Examine</span>
+      </button>
+
+      <div class="toast-stack" id="toastStack" aria-live="polite"></div>
+
+      <div class="mobile-controls" id="mobileControls">
+        <div class="joystick" id="joystick" aria-label="Movement joystick">
+          <div class="joystick-ring"></div>
+          <div class="joystick-knob" id="joystickKnob"></div>
+        </div>
+        <button class="action-btn" id="actionBtn" type="button" aria-label="Interact">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v13m0 0 4-4m-4 4-4-4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 19h14" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <section class="overlay title-screen" id="titleScreen" aria-labelledby="gameTitle">
+      <div class="title-glow" aria-hidden="true"></div>
+      <div class="title-content">
+        <div class="crest title-crest" aria-hidden="true">
+          <svg viewBox="0 0 120 120">
+            <path d="M60 8 106 60 60 112 14 60Z" fill="none" stroke="currentColor" stroke-width="1"/>
+            <path d="M60 22 92 60 60 98 28 60Z" fill="none" stroke="currentColor" stroke-width=".55" opacity=".55"/>
+            <path d="M60 34v52M43 51l17 17 17-17" fill="none" stroke="currentColor" stroke-width=".9"/>
+            <circle cx="60" cy="60" r="6.5" fill="none" stroke="currentColor" stroke-width=".8"/>
+            <circle cx="60" cy="60" r="2.2" fill="currentColor"/>
+          </svg>
+        </div>
+        <p class="eyebrow title-eyebrow">An isometric tale</p>
+        <h1 id="gameTitle"><span>Emberwood</span><em>Vale</em></h1>
+        <p class="tagline">A quiet village at the edge of the wild.<br>Five wandering embers. One cold beacon.</p>
+        <div class="title-actions">
+          <button class="primary-btn" id="enterBtn" type="button" disabled>
+            <span id="enterLabel">Waking the vale…</span>
+          </button>
+          <button class="ghost-btn" id="titleCredits" type="button">Assets &amp; credits</button>
+        </div>
+        <div class="title-meta">
+          <span id="loadStatus">Gathering the vale…</span>
+          <span class="meta-dot" aria-hidden="true">·</span>
+          <span id="saveStatus">New journey</span>
+        </div>
+      </div>
+      <p class="title-foot">Move with WASD / arrow keys · walk with a tap · listen for the embers</p>
+    </section>
+
+    <section class="overlay modal-layer is-hidden" id="dialogLayer" aria-labelledby="dialogTitle" role="dialog" aria-modal="true">
+      <div class="dialog panel">
+        <p class="eyebrow" id="dialogKicker">Emberwood Vale</p>
+        <h2 id="dialogTitle">A quiet place</h2>
+        <p id="dialogText"></p>
+        <div class="dialog-actions">
+          <button class="ghost-btn small is-hidden" id="dialogCancel" type="button">Cancel</button>
+          <button class="primary-btn small" id="dialogClose" type="button">Continue</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="overlay modal-layer is-hidden" id="menuLayer" role="dialog" aria-modal="true" aria-labelledby="menuTitle">
+      <div class="menu-card panel">
+        <p class="eyebrow">Pause</p>
+        <h2 id="menuTitle">A moment of stillness</h2>
+        <div class="menu-grid">
+          <button class="menu-item" id="resumeBtn" type="button"><span>Resume journey</span><kbd>esc</kbd></button>
+          <button class="menu-item" id="menuHelpBtn" type="button"><span>Controls</span><kbd>?</kbd></button>
+          <button class="menu-item" id="menuCreditsBtn" type="button"><span>Assets &amp; credits</span><span class="chev">›</span></button>
+          <button class="menu-item danger" id="resetBtn" type="button"><span>Begin anew</span><span class="chev">›</span></button>
+        </div>
+        <div class="menu-foot">
+          <span id="menuPlace">Emberwood Vale</span>
+          <span id="menuTime">0 min explored</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="overlay modal-layer credits-layer is-hidden" id="creditsLayer" role="dialog" aria-modal="true" aria-labelledby="creditsTitle">
+      <div class="credits-card panel">
+        <div class="credits-head">
+          <div>
+            <p class="eyebrow">With gratitude</p>
+            <h2 id="creditsTitle">Assets &amp; credits</h2>
+          </div>
+          <button class="icon-btn close-btn" id="creditsClose" type="button" aria-label="Close credits">×</button>
+        </div>
+        <div class="credits-scroll">
+          <p class="credits-intro">Emberwood Vale is built with free and open art from OpenGameArt.org, layered together with original code and effects.</p>
+          <ul class="credit-list">
+            <li><strong>Isometric ground tiles</strong><span>rubberduck · CC0</span><a href="https://opengameart.org/content/isometric-ground-tiles" target="_blank" rel="noopener noreferrer">OpenGameArt</a></li>
+            <li><strong>Isometric Small Trees</strong><span>Varkalandar · CC-BY 3.0</span><a href="https://opengameart.org/content/isometric-small-trees" target="_blank" rel="noopener noreferrer">OpenGameArt</a></li>
+            <li><strong>100+ isometric bushes</strong><span>ztn · CC-BY 3.0</span><a href="https://opengameart.org/content/100-isometric-bushes" target="_blank" rel="noopener noreferrer">OpenGameArt</a></li>
+            <li><strong>Isometric Pond</strong><span>Snabisch · CC-BY 3.0</span><a href="https://opengameart.org/content/isometric-pond" target="_blank" rel="noopener noreferrer">OpenGameArt</a></li>
+            <li><strong>Western-European Medieval Houses</strong><span>feudalwars · CC0</span><a href="https://opengameart.org/content/western-european-medieval-houses-isometric-25d" target="_blank" rel="noopener noreferrer">OpenGameArt</a></li>
+            <li><strong>Medieval Blacksmith</strong><span>rubberduck · CC0</span><a href="https://opengameart.org/content/medieval-blacksmith-isometric-25d" target="_blank" rel="noopener noreferrer">OpenGameArt</a></li>
+            <li><strong>Isometric Hero and Heroine</strong><span>Clint Bellanger · CC-BY 3.0</span><a href="https://opengameart.org/content/isometric-hero-and-heroine" target="_blank" rel="noopener noreferrer">OpenGameArt</a></li>
+            <li><strong>Cinzel &amp; Inter typefaces</strong><span>Natanael Gama, Rasmus Andersson · SIL OFL 1.1</span><a href="https://fonts.google.com/" target="_blank" rel="noopener noreferrer">Google Fonts</a></li>
+          </ul>
+          <p class="credits-note">Sprites were cropped, composited and scaled for this project. Rocks, flowers, reeds, brazier, particles and all code are original to Emberwood Vale. Full attribution and license notes live in <code>CREDITS.md</code>.</p>
+          <p class="credits-note">The Go server, world generation and save system were written for this phase-one foundation.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="overlay modal-layer is-hidden" id="endingLayer" role="dialog" aria-modal="true" aria-labelledby="endingTitle">
+      <div class="ending-card">
+        <div class="ending-embers" aria-hidden="true"></div>
+        <p class="eyebrow">The vale remembers</p>
+        <h2 id="endingTitle">The beacon burns again</h2>
+        <p>Warm light spills across the square. Somewhere beyond the trees, a door opens, and the village breathes a little easier.</p>
+        <dl class="ending-stats">
+          <div><dt>Embers gathered</dt><dd>5 / 5</dd></div>
+          <div><dt>Time in the vale</dt><dd id="endingTime">0 min</dd></div>
+        </dl>
+        <div class="ending-actions">
+          <button class="primary-btn small" id="keepExploring" type="button">Keep exploring</button>
+          <button class="ghost-btn small" id="endingMenu" type="button">Menu</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="overlay modal-layer is-hidden" id="helpLayer" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+      <div class="dialog panel help-card">
+        <p class="eyebrow">Wanderer's notes</p>
+        <h2 id="helpTitle">How to walk the vale</h2>
+        <div class="help-grid">
+          <div><span class="key">WASD</span><span class="key">↑←↓→</span><p>Walk. Hold <b>Shift</b> to run.</p></div>
+          <div><span class="key">Tap</span><p>Tap or click the ground to walk there.</p></div>
+          <div><span class="key">E</span><p>Examine a cottage, the pond, or the old brazier.</p></div>
+          <div><span class="key">Wheel</span><span class="key">Pinch</span><p>Zoom the view. Use the minimap buttons too.</p></div>
+        </div>
+        <p class="help-note">The five ember wisps drift near the pond, the northern meadow, the orchard, the south lane and the western grass. Gather them, then return to the brazier at the heart of the village.</p>
+        <div class="dialog-actions"><button class="primary-btn small" id="helpClose" type="button">Understood</button></div>
+      </div>
+    </section>
+
+    <div class="loading-veil" id="loadingVeil" aria-hidden="true"></div>
+  </div>
+  <script type="module" src="/js/main.js"></script>
+</body>
+</html>
